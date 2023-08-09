@@ -36,6 +36,7 @@ func getPIDs() ([]int, error) {
 	for _, entry := range dirEntries {
 		num, err := strconv.Atoi(entry.Name())
 		if err != nil {
+			// some filenames are not uid numbers, skip in silence.
 			continue
 		}
 		ret = append(ret, num)
