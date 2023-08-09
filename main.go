@@ -66,9 +66,28 @@ func getCommandName(pid int) (string, error) {
 var pageSize = os.Getpagesize()
 
 func getMemoryStat(pid int) (private, shared int, err error) {
-	statm, err := NewStatM(pid)
+	smaps, err := NewSMaps(pid)
 	if err != nil {
+		if os.IsNotExist(err) {
+			// fallback to statm calculation
+			statm, err := NewStatM(pid)
+			if err != nil {
+				return 0, 0, err
+			}
+			private = (statm.Resident - statm.Shared) * pageSize
+			shared = statm.Shared * pageSize
+			return private, shared, nil
+		}
 		return 0, 0, err
 	}
-	return (statm.Resident - statm.Shared) * pageSize, statm.Shared * pageSize, nil
+
+	if smaps.PSS != 0 {
+		shared = (smaps.PSS - smaps.Private) * iecScale
+	} else {
+		shared = (smaps.Shared) * iecScale
+	}
+	private = (smaps.Private + smaps.PrivateHugeTLB) * iecScale
+	return private, shared, nil
 }
+
+const iecScale = 1024
