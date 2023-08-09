@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"strconv"
 )
 
@@ -13,7 +14,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(pids)
+
+	for _, pid := range pids {
+		commandName, err := getCommandName(pid)
+		if err != nil {
+			log.Println(err)
+		}
+		fmt.Printf("%8d: %v\n", pid, commandName)
+	}
 }
 
 const procPathRoot = "/proc"
@@ -33,4 +41,10 @@ func getPIDs() ([]int, error) {
 		ret = append(ret, num)
 	}
 	return ret, nil
+}
+
+// getCommandName is getCmdName in ps_men.py, read the whole name of link /proc/${pid}/exe.
+// Commonly return a permission denied error with path on other user's process if not run with root.
+func getCommandName(pid int) (string, error) {
+	return os.Readlink(path.Join(procPathRoot, strconv.Itoa(pid), "exe"))
 }
