@@ -12,7 +12,6 @@ import (
 )
 
 func main() {
-	fmt.Println("Hello world.")
 	pids, err := getPIDs()
 	if err != nil {
 		log.Fatal(err)
@@ -33,9 +32,14 @@ func main() {
 			log.Println(err)
 			continue
 		}
+		stat, err := NewStat(pid)
+		if err != nil {
+			log.Fatal(err)
+		}
 		fmt.Printf(
-			"%8d: %v %s + %s\n",
+			"%6d(%6d): %v %s + %s\n",
 			pid,
+			stat.PPID,
 			formatName(commandName, args),
 			humanize.IBytes(uint64(private)),
 			humanize.IBytes(uint64(shared)),
