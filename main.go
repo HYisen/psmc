@@ -19,7 +19,6 @@ func main() {
 	for _, pid := range pids {
 		commandName, err := getCommandName(pid)
 		if err != nil {
-			log.Println(err)
 			continue
 		}
 		private, shared, err := getMemoryStat(pid)
@@ -59,6 +58,7 @@ func getPIDs() ([]int, error) {
 
 // getCommandName is getCmdName in ps_men.py, read the whole name of link /proc/${pid}/exe.
 // Commonly return a permission denied error with path on other user's process if not run with root.
+// Or even as root, no such file or directory, as kernel threads don't have exe links or process gone.
 func getCommandName(pid int) (string, error) {
 	return os.Readlink(path.Join(procPathRoot, strconv.Itoa(pid), "exe"))
 }
