@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/dustin/go-humanize"
 	"log"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 )
 
 func main() {
@@ -26,14 +28,26 @@ func main() {
 			log.Println(err)
 			continue
 		}
+		args, err := getArguments(pid)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
 		fmt.Printf(
 			"%8d: %v %s + %s\n",
 			pid,
-			commandName,
+			formatName(commandName, args),
 			humanize.IBytes(uint64(private)),
 			humanize.IBytes(uint64(shared)),
 		)
 	}
+}
+
+func formatName(commandName string, args []string) string {
+	if len(args) > 0 && args[0] == commandName {
+		return strings.Join(args, " ")
+	}
+	return fmt.Sprintf("%s %v", commandName, args)
 }
 
 const procPathRoot = "/proc"
@@ -61,6 +75,22 @@ func getPIDs() ([]int, error) {
 // Or even as root, no such file or directory, as kernel threads don't have exe links or process gone.
 func getCommandName(pid int) (string, error) {
 	return os.Readlink(path.Join(procPathRoot, strconv.Itoa(pid), "exe"))
+}
+
+func getArguments(pid int) ([]string, error) {
+	data, err := os.ReadFile(path.Join(procPathRoot, strconv.Itoa(pid), "cmdline"))
+	if err != nil {
+		return nil, err
+	}
+	var ret []string
+	// ref https://man7.org/linux/man-pages/man5/proc.5.html
+	// The commandline arguments appear in this file as a set of strings separated by null bytes ('\0'),
+	// with a further null byte after the last string.
+	parts := bytes.Split(data[:len(data)-1], []byte{0})
+	for _, part := range parts {
+		ret = append(ret, string(part))
+	}
+	return ret, nil
 }
 
 var pageSize = os.Getpagesize()
